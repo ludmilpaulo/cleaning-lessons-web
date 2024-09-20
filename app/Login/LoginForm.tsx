@@ -35,9 +35,9 @@ const LoginForm = () => {
         dispatch(loginUser(data));
         alert("Login Successful..");
         if (data.is_staff) {
-          router.push("/Admin");
+          router.push("/Tutor");
         } else {
-          router.push("/HomePage");
+          router.push("/DashboardPage");
         }
       }
     } catch (err: unknown) {
