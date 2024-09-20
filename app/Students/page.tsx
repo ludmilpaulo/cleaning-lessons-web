@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import {useRouter, useSearchParams } from 'next/navigation'; // to get courseId from the query
 import { getCourseDetail } from '@/services/courseService'; // Assuming the API service exists
 import EnrollModal from './EnrollModal';
@@ -137,4 +137,11 @@ const CourseDetail: React.FC = () => {
   );
 };
 
-export default CourseDetail;
+const StudentPage = () => (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <CourseDetail />
+    </Suspense>
+);
+
+export default StudentPage;
+

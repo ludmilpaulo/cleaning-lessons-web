@@ -23,7 +23,7 @@ const AddModules: React.FC<AddModuleProps> = ({ courseId, token }) => {
     setSuccessMessage(null);
 
     try {
-      const response = await axios.post(
+      await axios.post(
         `${baseAPI}/lessons/courses/${courseId}/modules/`,
         {
           title,

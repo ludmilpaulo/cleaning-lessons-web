@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   },
   viewport: "width=device-width, initial-scale=1.0",
   robots: "index, follow",  // Allow indexing by search engines
-  canonical: "https://www.aprendamas.com",  // Canonical URL
+
 };
 
 export default function RootLayout({

@@ -46,16 +46,18 @@ const StudentDashboard: React.FC = () => {
     const fetchDashboard = async () => {
       try {
         const data = await getStudentDashboard(token);
-        console.log("courses", data)
+        console.log("courses", data);
         setCourses(data);
-      } catch (err: any) {
-        if (err.message.includes('401')) {
-          setError('Sua sessão expirou. Faça login novamente.');
-          router.push('/Login'); // Redirect to login if unauthorized
-        } else if (err.message.includes('403')) {
-          setError('Você não tem permissão para acessar este conteúdo.');
-        } else {
-          setError('Erro ao carregar os dados do painel.');
+      } catch (err: unknown) { // Use `unknown` instead of `any`
+        if (err instanceof Error) { // Check if `err` is an instance of `Error`
+          if (err.message.includes('401')) {
+            setError('Sua sessão expirou. Faça login novamente.');
+            router.push('/Login'); // Redirect to login if unauthorized
+          } else if (err.message.includes('403')) {
+            setError('Você não tem permissão para acessar este conteúdo.');
+          } else {
+            setError('Erro ao carregar os dados do painel.');
+          }
         }
       } finally {
         setLoading(false);

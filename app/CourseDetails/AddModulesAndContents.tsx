@@ -1,19 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { baseAPI } from "@/utils/variables";
 
-interface Module {
-  id: number;
-  title: string;
-  description: string;
-}
-
 interface AddModuleProps {
   courseId: number;
-  moduleId: number; // Selected Module ID to which content will be added
+  moduleId: number;
 }
 
 const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId }) => {
@@ -41,6 +35,7 @@ const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId })
     const formData = new FormData();
     formData.append("content_type", contentType);
     formData.append("module", String(moduleId));
+    formData.append("courseId", String(courseId)); // Use courseId if necessary
 
     if (auth_user?.token) {
       formData.append("token", auth_user.token);
