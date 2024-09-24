@@ -5,10 +5,13 @@ import { getStudentDashboard } from '@/services/studentService';
 import { RootState } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface Content {
-  content_type: string;
-  content_data: string;
+  title: string;
+  content?: string;
+  file?: string;
+  url?: string;
 }
 
 interface Module {
@@ -36,8 +39,6 @@ const StudentDashboard: React.FC = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to login page if no token is available
-    console.log("Token being used: ", token);
     if (!token) {
       router.push('/Login');
       return;
@@ -46,13 +47,13 @@ const StudentDashboard: React.FC = () => {
     const fetchDashboard = async () => {
       try {
         const data = await getStudentDashboard(token);
-        console.log("courses", data);
+        console.log("contents==>", data);
         setCourses(data);
-      } catch (err: unknown) { // Use `unknown` instead of `any`
-        if (err instanceof Error) { // Check if `err` is an instance of `Error`
+      } catch (err: unknown) {
+        if (err instanceof Error) {
           if (err.message.includes('401')) {
             setError('Sua sessão expirou. Faça login novamente.');
-            router.push('/Login'); // Redirect to login if unauthorized
+            router.push('/Login');
           } else if (err.message.includes('403')) {
             setError('Você não tem permissão para acessar este conteúdo.');
           } else {
@@ -66,6 +67,60 @@ const StudentDashboard: React.FC = () => {
 
     fetchDashboard();
   }, [token, router]);
+
+  const renderContentItem = (content: Content) => {
+    if (content.content) {
+      return <p className="text-gray-800">{content.content}</p>;
+    } else if (content.file) {
+      const fileType = content.file.split('.').pop();
+      if (fileType === 'pdf' || fileType === 'docx') {
+        return (
+          <a
+            href={content.file}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-600 hover:underline"
+          >
+            {content.title} - Baixar Arquivo
+          </a>
+        );
+      } else {
+        return (
+          <div className="relative w-full h-64 mt-4">
+            <Image
+              src={content.file}
+              alt={content.title}
+              layout="fill"
+              objectFit="contain"
+              className="rounded-md"
+            />
+          </div>
+        );
+      }
+    } else if (content.url) {
+      const isYouTube = content.url.includes("youtube.com") || content.url.includes("youtu.be");
+      const embedUrl = isYouTube
+        ? content.url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")
+        : content.url;
+
+      return isYouTube ? (
+        <iframe
+          className="w-full h-64 mt-4 rounded-md"
+          src={embedUrl}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title={content.title}
+        />
+      ) : (
+        <video controls className="w-full h-auto mt-4 rounded-md" src={embedUrl}>
+          Your browser does not support the video tag.
+        </video>
+      );
+    }
+
+    return <p>Tipo de conteúdo desconhecido.</p>;
+  };
 
   if (loading) {
     return (
@@ -113,7 +168,7 @@ const StudentDashboard: React.FC = () => {
                     <ul className="pl-4 mt-2 space-y-2">
                       {module.contents.map((content, contentIndex) => (
                         <li key={contentIndex} className="text-gray-600">
-                          <span className="font-semibold">{content.content_type}:</span> {content.content_data}
+                          <span className="font-semibold">{content.title}:</span> {renderContentItem(content)}
                         </li>
                       ))}
                     </ul>
