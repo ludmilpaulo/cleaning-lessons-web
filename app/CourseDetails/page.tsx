@@ -8,6 +8,8 @@ import { useSelector } from "react-redux";
 import AddModulesAndContents from "./AddModulesAndContents";
 import AddModules from "./AddModules";
 import Image from "next/image";
+import Modal from "./Modal";
+
 
 interface Module {
   id: number;
@@ -60,10 +62,11 @@ const CourseDetails: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [contentTypes, setContentTypes] = useState<ContentTypes | null>(null);
-
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // For module modal
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
 
+  // Fetch content types
   useEffect(() => {
     const fetchContentTypes = async () => {
       try {
@@ -77,6 +80,7 @@ const CourseDetails: React.FC = () => {
     fetchContentTypes();
   }, []);
 
+  // Fetch modules and refetch every 5 seconds
   useEffect(() => {
     const fetchModules = async () => {
       if (!courseId) return;
@@ -88,6 +92,7 @@ const CourseDetails: React.FC = () => {
           },
         });
         setModules(responseModules.data);
+        setError("");
       } catch (err) {
         console.error("Failed to load course details", err);
         setError("Falha ao carregar os detalhes do curso.");
@@ -96,7 +101,12 @@ const CourseDetails: React.FC = () => {
       }
     };
 
+    // Initial fetch
     fetchModules();
+
+    // Refetch every 5 seconds
+    const intervalId = setInterval(fetchModules, 5000);
+    return () => clearInterval(intervalId); // Cleanup on unmount
   }, [courseId, token]);
 
   const handleModuleClick = async (module: Module) => {
@@ -114,7 +124,6 @@ const CourseDetails: React.FC = () => {
         }
       );
       setContents(responseContents.data);
-      console.log("API Response:", responseContents.data);
     } catch (err) {
       console.error("Failed to load module contents", err);
       setError("Falha ao carregar o conteúdo do módulo.");
@@ -189,7 +198,11 @@ const CourseDetails: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="text-center text-lg">Carregando...</div>;
+    return (
+      <div className="animate-pulse">
+        <div className="text-center text-lg">Carregando...</div>
+      </div>
+    );
   }
 
   if (error) {
@@ -199,7 +212,15 @@ const CourseDetails: React.FC = () => {
   return (
     <div className="flex flex-row space-x-4 max-w-7xl mx-auto p-6">
       <div className="w-1/4 bg-white p-4 shadow-lg rounded-lg">
-        <h3 className="text-xl font-semibold mb-4">Módulos</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold">Módulos</h3>
+          <button
+            className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
+            onClick={() => setIsModalOpen(true)} // Open modal on click
+          >
+            + Módulo
+          </button>
+        </div>
         {modules.length > 0 ? (
           <ul className="space-y-2">
             {modules.map((mod) => (
@@ -215,21 +236,17 @@ const CourseDetails: React.FC = () => {
             ))}
           </ul>
         ) : (
-          <div>
-            <p className="text-gray-600">Este curso não possui módulos. Adicione um módulo para começar.</p>
-            <AddModules courseId={Number(courseId)} token={token || ""} />
-          </div>
+          <p className="text-gray-600">Este curso não possui módulos. Adicione um módulo para começar.</p>
         )}
       </div>
 
       <div className="w-3/4 bg-white p-6 shadow-lg rounded-lg">
-      <div className="flex justify-between items-center mb-4">
-  <h2 className="text-2xl font-bold">Conteúdo do Módulo</h2>
-  {selectedModule && (
-    <AddModulesAndContents courseId={Number(courseId)} moduleId={selectedModule.id} />
-  )}
-</div>
-
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Conteúdo do Módulo</h2>
+          {selectedModule && (
+            <AddModulesAndContents courseId={Number(courseId)} moduleId={selectedModule.id} />
+          )}
+        </div>
 
         {selectedModule ? (
           <div>
@@ -240,7 +257,6 @@ const CourseDetails: React.FC = () => {
               {contents.length > 0 ? (
                 contents.map((content) => (
                   <li key={content.id} className="p-2 border-b">
-                    <span className="font-medium text-gray-800"></span>
                     {renderContentItem(content)}
                   </li>
                 ))
@@ -253,6 +269,13 @@ const CourseDetails: React.FC = () => {
           <p className="text-gray-600">Por favor, selecione um módulo para ver o conteúdo.</p>
         )}
       </div>
+
+      {/* Modal for adding modules */}
+      {isModalOpen && (
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+          <AddModules courseId={Number(courseId)} token={token || ""} onClose={() => setIsModalOpen(false)} />
+        </Modal>
+      )}
     </div>
   );
 };

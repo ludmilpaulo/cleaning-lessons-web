@@ -157,12 +157,11 @@ const StudentDashboard: React.FC = () => {
               <h2 className="text-2xl font-semibold mb-4 text-indigo-600">{course.title}</h2>
               <p className="text-gray-600 mb-4">{course.overview}</p>
               <p className="text-gray-500 mb-4">Progresso do Curso: {course.progress}%</p>
-
               <div>
                 {course.modules.map((module, moduleIndex) => (
-                  <details key={moduleIndex} className="mb-4">
+                <details key={moduleIndex} className="mb-4">
                     <summary className="cursor-pointer text-lg font-medium text-gray-700 hover:text-indigo-500">
-                      {module.order}. {module.title} ({module.completed_content_count}/{module.total_content_count})
+                    {module.order}. {module.title} ({module.completed_content_count}/{module.total_content_count})
                     </summary>
                     <p className="text-gray-500">{module.description}</p>
                     <ul className="pl-4 mt-2 space-y-2">

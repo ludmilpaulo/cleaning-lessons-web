@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import Image from "next/image";
 import { useSelector } from "react-redux";
-import AddCourseModal from "./AddCourseModal"; // Import the AddCourseModal component
+import AddCourseModal from "./AddCourseModal";
 import { baseAPI } from "@/utils/variables";
 import { RootState } from "@/redux/store";
 
@@ -19,11 +19,11 @@ const Course: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // Modal state
-
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const userId = auth_user?.user_id;
 
+  // Fetch courses every 5 seconds
   useEffect(() => {
     const fetchCourses = async () => {
       if (!userId) {
@@ -35,7 +35,7 @@ const Course: React.FC = () => {
       try {
         const response = await axios.get(`${baseAPI}/lessons/courses/user/`, {
           headers: {
-            Authorization: `Token ${auth_user.token}`, // Pass the token to authenticate
+            Authorization: `Token ${auth_user.token}`,
           },
         });
 
@@ -43,6 +43,7 @@ const Course: React.FC = () => {
           setError("Nenhum curso encontrado para este usuário.");
         } else {
           setCourses(response.data);
+          setError("");
         }
       } catch (err) {
         console.error(err);
@@ -52,13 +53,19 @@ const Course: React.FC = () => {
       }
     };
 
+    // Initial fetch
     fetchCourses();
+
+    // Refetch every 5 seconds
+    const intervalId = setInterval(fetchCourses, 5000);
+
+    return () => clearInterval(intervalId); // Cleanup on component unmount
   }, [userId, auth_user, router]);
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-4 border-b-4 border-indigo-500"></div>
       </div>
     );
   }
@@ -68,8 +75,8 @@ const Course: React.FC = () => {
       <div className="flex items-center justify-between mb-8">
         {/* Add Course Button */}
         <button
-          className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200 shadow-md"
-          onClick={() => setIsModalOpen(true)} // Open modal on click
+          className="bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-200 shadow-md"
+          onClick={() => setIsModalOpen(true)}
         >
           + Adicionar Curso
         </button>
@@ -79,9 +86,12 @@ const Course: React.FC = () => {
 
       {/* Courses grid */}
       {courses.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"> {/* Updated for responsiveness */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {courses.map((course) => (
-            <div key={course.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div
+              key={course.id}
+              className="bg-white shadow-lg rounded-lg overflow-hidden transform transition hover:-translate-y-2 hover:shadow-xl duration-300"
+            >
               <div className="relative w-full h-48">
                 <Image
                   src={course.image}
@@ -93,29 +103,27 @@ const Course: React.FC = () => {
               </div>
               <div className="p-6">
                 <h3 className="text-2xl font-bold text-gray-800">{course.title}</h3>
-                <p className="text-gray-600 mt-2">{course.overview}</p>
+                <p className="text-gray-600 mt-2 truncate">{course.overview}</p>
                 <button
-  className="mt-4 w-full bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition duration-200"
-  onClick={() => router.push(`/CourseDetails?courseId=${course.id}`)} // Use template literals to add courseId as a query param
->
-  Acessar Curso
-</button>
-
+                  className="mt-4 w-full bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 transition duration-200"
+                  onClick={() => router.push(`/CourseDetails?courseId=${course.id}`)}
+                >
+                  Acessar Curso
+                </button>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="flex justify-center mt-6">
+        <div className="flex flex-col items-center justify-center mt-6">
           <p className="text-xl text-gray-700">Você ainda não tem cursos.</p>
-           <button
-          className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200 shadow-md"
-          onClick={() => setIsModalOpen(true)} // Open modal on click
-        >
-          + Adicionar Curso
-        </button>
+          <button
+            className="mt-4 bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition duration-200 shadow-md"
+            onClick={() => setIsModalOpen(true)}
+          >
+            + Adicionar Curso
+          </button>
         </div>
-        
       )}
 
       {/* Modal */}
@@ -123,6 +131,5 @@ const Course: React.FC = () => {
     </div>
   );
 };
-
 
 export default Course;
