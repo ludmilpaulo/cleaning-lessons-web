@@ -11,7 +11,7 @@ interface Course {
   id: number;
   title: string;
   overview: string;
-  image: string;
+  image: string | null; // Allow the image to be null
 }
 
 const Course: React.FC = () => {
@@ -35,7 +35,7 @@ const Course: React.FC = () => {
       try {
         const response = await axios.get(`${baseAPI}/lessons/courses/user/`, {
           headers: {
-            Authorization: `Token ${auth_user.token}`,
+            Authorization: `Token ${auth_user?.token}`, // Safe access with optional chaining
           },
         });
 
@@ -93,13 +93,19 @@ const Course: React.FC = () => {
               className="bg-white shadow-lg rounded-lg overflow-hidden transform transition hover:-translate-y-2 hover:shadow-xl duration-300"
             >
               <div className="relative w-full h-48">
-                <Image
-                  src={course.image}
-                  alt={course.title}
-                  layout="fill"
-                  objectFit="cover"
-                  className="rounded-t-lg"
-                />
+                {course.image ? (
+                  <Image
+                    src={course.image}
+                    alt={course.title}
+                    layout="fill"
+                    objectFit="cover"
+                    className="rounded-t-lg"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <p className="text-gray-500">No Image</p>
+                  </div>
+                )}
               </div>
               <div className="p-6">
                 <h3 className="text-2xl font-bold text-gray-800">{course.title}</h3>

@@ -77,14 +77,14 @@ const LoginForm = () => {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-semibold mb-2 text-gray-700">
-            Nome de usuário
+            Email de usuário
             </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full p-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              placeholder="Digite seu nome de usuário ou e-mail"
+              placeholder="Digite seu e-mail"
             />
           </div>
           <div className="mb-4 relative">
