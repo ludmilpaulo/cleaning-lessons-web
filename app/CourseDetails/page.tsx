@@ -9,7 +9,8 @@ import AddModulesAndContents from "./AddModulesAndContents";
 import AddModules from "./AddModules";
 import Image from "next/image";
 import Modal from "./Modal";
-
+import { FiLoader } from "react-icons/fi";
+import { AiOutlinePlus, AiOutlineCheckCircle, AiOutlineWarning } from "react-icons/ai";
 
 interface Module {
   id: number;
@@ -63,6 +64,10 @@ const CourseDetails: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [contentTypes, setContentTypes] = useState<ContentTypes | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // For module modal
+  const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false); // For test modal
+  const [newTest, setNewTest] = useState({ name: '', start_time: '', end_time: '', total_marks: '' }); // Test form state
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null); // Notification state
+
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
 
@@ -73,14 +78,14 @@ const CourseDetails: React.FC = () => {
         const response = await axios.get(`${baseAPI}/lessons/get-content-types/`);
         setContentTypes(response.data);
       } catch (err) {
-        console.error("Failed to fetch content types", err);
+        setError("Failed to fetch content types.");
       }
     };
 
     fetchContentTypes();
   }, []);
 
-  // Fetch modules and refetch every 5 seconds
+  // Fetch modules on load
   useEffect(() => {
     const fetchModules = async () => {
       if (!courseId) return;
@@ -94,19 +99,13 @@ const CourseDetails: React.FC = () => {
         setModules(responseModules.data);
         setError("");
       } catch (err) {
-        console.error("Failed to load course details", err);
-        setError("Falha ao carregar os detalhes do curso.");
+        setError("Failed to load course details.");
       } finally {
         setLoading(false);
       }
     };
 
-    // Initial fetch
     fetchModules();
-
-    // Refetch every 5 seconds
-    const intervalId = setInterval(fetchModules, 5000);
-    return () => clearInterval(intervalId); // Cleanup on unmount
   }, [courseId, token]);
 
   const handleModuleClick = async (module: Module) => {
@@ -120,20 +119,60 @@ const CourseDetails: React.FC = () => {
         {
           headers: {
             Authorization: `Token ${token}`,
-          },
+          }
         }
       );
       setContents(responseContents.data);
     } catch (err) {
-      console.error("Failed to load module contents", err);
-      setError("Falha ao carregar o conteúdo do módulo.");
+      setError("Failed to load module contents.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleTestInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewTest((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmitTest = async () => {
+    try {
+      await axios.post(`${baseAPI}/tests/modules/${selectedModule?.id}/create_test/`, { test: newTest });  // No need for 'response'
+      setNotification({ type: "success", message: "Test created successfully!" });
+      setNewTest({ name: '', start_time: '', end_time: '', total_marks: '' });
+      setIsTestModalOpen(false);
+    } catch (error) {
+      setNotification({ type: "error", message: "Failed to create test. Please try again." });
+    }
+  };
+  
+
+  useEffect(() => {
+    if (notification) {
+      const timeout = setTimeout(() => setNotification(null), 5000);  // Auto-hide notification after 5 seconds
+      return () => clearTimeout(timeout);
+    }
+  }, [notification]);
+
+  const renderNotification = () => {
+    if (!notification) return null;
+
+    const Icon = notification.type === 'success' ? AiOutlineCheckCircle : AiOutlineWarning;
+
+    return (
+      <div className={`fixed top-4 right-4 p-4 text-white rounded-lg shadow-lg 
+        ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+        <div className="flex items-center space-x-2">
+          <Icon size={24} />
+          <span>{notification.message}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Define renderContentItem function to render each type of content
   const renderContentItem = (content: Content) => {
-    if (!contentTypes) return <p>Carregando tipos de conteúdo...</p>;
+    if (!contentTypes) return <p>Loading content types...</p>;
 
     const contentType = content.content_type;
 
@@ -193,14 +232,14 @@ const CourseDetails: React.FC = () => {
         );
 
       default:
-        return <p>Tipo de conteúdo desconhecido.</p>;
+        return <p>Unknown content type.</p>;
     }
   };
 
   if (loading) {
     return (
-      <div className="animate-pulse">
-        <div className="text-center text-lg">Carregando...</div>
+      <div className="flex justify-center items-center h-64">
+        <FiLoader className="animate-spin text-indigo-500 text-3xl" />
       </div>
     );
   }
@@ -211,14 +250,16 @@ const CourseDetails: React.FC = () => {
 
   return (
     <div className="flex flex-row space-x-4 max-w-7xl mx-auto p-6">
+      {renderNotification()}
+
       <div className="w-1/4 bg-white p-4 shadow-lg rounded-lg">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">Módulos</h3>
+          <h3 className="text-xl font-semibold">Modules</h3>
           <button
-            className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600"
-            onClick={() => setIsModalOpen(true)} // Open modal on click
+            className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600 flex items-center"
+            onClick={() => setIsModalOpen(true)}
           >
-            + Módulo
+            <AiOutlinePlus className="mr-1" /> Add Module
           </button>
         </div>
         {modules.length > 0 ? (
@@ -236,13 +277,13 @@ const CourseDetails: React.FC = () => {
             ))}
           </ul>
         ) : (
-          <p className="text-gray-600">Este curso não possui módulos. Adicione um módulo para começar.</p>
+          <p className="text-gray-600">This course has no modules. Add a module to start.</p>
         )}
       </div>
 
       <div className="w-3/4 bg-white p-6 shadow-lg rounded-lg">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Conteúdo do Módulo</h2>
+          <h2 className="text-2xl font-bold">Module Content</h2>
           {selectedModule && (
             <AddModulesAndContents courseId={Number(courseId)} moduleId={selectedModule.id} />
           )}
@@ -261,27 +302,110 @@ const CourseDetails: React.FC = () => {
                   </li>
                 ))
               ) : (
-                <p className="text-gray-600">Este módulo não tem conteúdo. Adicione um conteúdo para começar.</p>
+                <p className="text-gray-600">This module has no content. Add content to start.</p>
               )}
             </ul>
           </div>
         ) : (
-          <p className="text-gray-600">Por favor, selecione um módulo para ver o conteúdo.</p>
+          <p className="text-gray-600">Please select a module to view its content.</p>
+        )}
+
+        {selectedModule && (
+          <div className="flex justify-end mt-4">
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+              onClick={() => setIsTestModalOpen(true)}
+            >
+              Create Test
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Modal for adding modules */}
       {isModalOpen && (
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
           <AddModules courseId={Number(courseId)} token={token || ""} onClose={() => setIsModalOpen(false)} />
         </Modal>
+      )}
+
+      {isTestModalOpen && (
+        <Modal isOpen={isTestModalOpen} onClose={() => setIsTestModalOpen(false)}>
+          <h3 className="text-xl font-bold mb-4">Create Test for {selectedModule?.title}</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-1 text-gray-700">Test Name</label>
+              <input
+                type="text"
+                name="name"
+                className="w-full p-2 border rounded-md"
+                placeholder="Test Name"
+                value={newTest.name}
+                onChange={handleTestInputChange}
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-gray-700">Start Time</label>
+              <input
+                type="datetime-local"
+                name="start_time"
+                className="w-full p-2 border rounded-md"
+                value={newTest.start_time}
+                onChange={handleTestInputChange}
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-gray-700">End Time</label>
+              <input
+                type="datetime-local"
+                name="end_time"
+                className="w-full p-2 border rounded-md"
+                value={newTest.end_time}
+                onChange={handleTestInputChange}
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-gray-700">Total Marks</label>
+              <input
+                type="number"
+                name="total_marks"
+                className="w-full p-2 border rounded-md"
+                placeholder="Total Marks"
+                value={newTest.total_marks}
+                onChange={handleTestInputChange}
+              />
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end space-x-4">
+            <button
+              onClick={() => setIsTestModalOpen(false)}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitTest}
+              className="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600"
+            >
+              Create Test
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {selectedModule && (
+        <button
+          onClick={() => window.location.href = `/live-chat?moduleId=${selectedModule.id}`}
+          className="bg-green-500 text-white px-3 py-1 rounded ml-4 hover:bg-green-600"
+        >
+          Live Chat for {selectedModule.title}
+        </button>
       )}
     </div>
   );
 };
 
 const CoursePage = () => (
-  <Suspense fallback={<div>Carregando...</div>}>
+  <Suspense fallback={<div>Loading...</div>}>
     <CourseDetails />
   </Suspense>
 );
