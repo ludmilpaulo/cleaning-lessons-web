@@ -13,9 +13,9 @@ interface FormData {
   surname: string;
   email: string;
   phone_number: string;
-  id_number_or_passport: string;
+
   gender: string;
-  date_of_birth: string;
+
   address: string;
 }
 

@@ -137,15 +137,22 @@ const CourseDetails: React.FC = () => {
 
   const handleSubmitTest = async () => {
     try {
-      await axios.post(`${baseAPI}/tests/modules/${selectedModule?.id}/create_test/`, { test: newTest });  // No need for 'response'
+      const token = auth_user?.token;  // Get the user's authentication token
+      await axios.post(`${baseAPI}/tests/modules/${selectedModule?.id}/create_test/`,
+        { test: newTest },
+        {
+          headers: {
+            Authorization: `Token ${token}`,  // Send the token in the Authorization header
+          }
+        }
+      );
       setNotification({ type: "success", message: "Test created successfully!" });
-      setNewTest({ name: '', start_time: '', end_time: '', total_marks: '' });
       setIsTestModalOpen(false);
     } catch (error) {
       setNotification({ type: "error", message: "Failed to create test. Please try again." });
     }
   };
-  
+
 
   useEffect(() => {
     if (notification) {

@@ -6,9 +6,8 @@ interface FormData {
   surname: string;
   email: string;
   phone_number: string;
-  id_number_or_passport: string;
+ 
   gender: string;
-  date_of_birth: string;
   address: string;
 }
 
@@ -24,9 +23,7 @@ const EnrollModal: React.FC<EnrollModalProps> = ({ courseName, onClose, onSubmit
     surname: '',
     email: '',
     phone_number: '',
-    id_number_or_passport: '',
     gender: '',
-    date_of_birth: '',
     address: '',
   });
 
@@ -103,16 +100,7 @@ const EnrollModal: React.FC<EnrollModalProps> = ({ courseName, onClose, onSubmit
                 className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">Número de Identidade ou Passaporte</label>
-              <input
-                type="text"
-                name="id_number_or_passport"
-                onChange={handleChange}
-                value={formData.id_number_or_passport}
-                className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+           
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1">Gênero</label>
               <select
@@ -127,16 +115,7 @@ const EnrollModal: React.FC<EnrollModalProps> = ({ courseName, onClose, onSubmit
                 <option value="other">Outro</option>
               </select>
             </div>
-            <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">Data de Nascimento</label>
-              <input
-                type="date"
-                name="date_of_birth"
-                onChange={handleChange}
-                value={formData.date_of_birth}
-                className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+           
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-1">Endereço</label>
               <textarea
