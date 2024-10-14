@@ -5,11 +5,12 @@ import { baseAPI } from "@/utils/variables";
 
 interface AddModuleProps {
   courseId: number;
-  token: string;  // Pass token to authenticate the user
-  onClose: () => void; // Function to close the modal
+  token: string;
+  onClose: () => void;
+  refreshModules: () => void;  // Add this prop to refresh the module list
 }
 
-const AddModules: React.FC<AddModuleProps> = ({ courseId, token, onClose }) => {
+const AddModules: React.FC<AddModuleProps> = ({ courseId, token, onClose, refreshModules }) => {
   const [title, setTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [order, setOrder] = useState<number>(0);
@@ -50,7 +51,7 @@ const AddModules: React.FC<AddModuleProps> = ({ courseId, token, onClose }) => {
         },
         {
           headers: {
-            Authorization: `Token ${token}`,  // Pass token in the header
+            Authorization: `Token ${token}`,
           },
         }
       );
@@ -60,7 +61,10 @@ const AddModules: React.FC<AddModuleProps> = ({ courseId, token, onClose }) => {
       setDescription("");
       setOrder(0);
 
-      // Optionally, you can call onClose to close the modal after successful submission
+      // Call refreshModules to update the module list in the parent component
+      refreshModules();
+
+      // Close the modal after successful submission
       onClose();
     } catch (err) {
       console.error("Error adding module", err);

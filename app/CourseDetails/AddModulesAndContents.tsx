@@ -8,14 +8,15 @@ import { baseAPI } from "@/utils/variables";
 interface AddModuleProps {
   courseId: number;
   moduleId: number;
+  onContentAdded: () => void; // Callback to trigger when content is added
 }
 
-const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId }) => {
-  const [contentType, setContentType] = useState("");
-  const [textContent, setTextContent] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
+const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId, onContentAdded }) => {
+  const [contentType, setContentType] = useState<string>("");
+  const [textContent, setTextContent] = useState<string>("");
+  const [videoUrl, setVideoUrl] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -27,7 +28,7 @@ const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId })
     setSuccessMessage(null);
 
     if (!contentType) {
-      setErrorMessage("Please select a content type.");
+      setErrorMessage("Por favor, selecione um tipo de conteúdo.");
       setLoading(false);
       return;
     }
@@ -35,12 +36,12 @@ const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId })
     const formData = new FormData();
     formData.append("content_type", contentType);
     formData.append("module", String(moduleId));
-    formData.append("courseId", String(courseId)); // Use courseId if necessary
+    formData.append("courseId", String(courseId));
 
     if (auth_user?.token) {
       formData.append("token", auth_user.token);
     } else {
-      setErrorMessage("Token is missing.");
+      setErrorMessage("O token está faltando.");
       setLoading(false);
       return;
     }
@@ -52,7 +53,7 @@ const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId })
     } else if ((contentType === "image" || contentType === "file") && file) {
       formData.append("file", file);
     } else {
-      setErrorMessage("Please provide content data.");
+      setErrorMessage("Por favor, forneça os dados do conteúdo.");
       setLoading(false);
       return;
     }
@@ -63,10 +64,11 @@ const AddModulesAndContents: React.FC<AddModuleProps> = ({ courseId, moduleId })
           "Content-Type": "multipart/form-data",
         },
       });
-      setSuccessMessage("Content added successfully!");
+      setSuccessMessage("Conteúdo adicionado com sucesso!");
+      onContentAdded(); // Trigger the callback to refetch the content
     } catch (err) {
-      console.error("Failed to add content", err);
-      setErrorMessage("Failed to add content.");
+      console.error("Falha ao adicionar conteúdo", err);
+      setErrorMessage("Falha ao adicionar conteúdo.");
     } finally {
       setLoading(false);
     }
