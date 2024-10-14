@@ -31,9 +31,10 @@ interface Course {
 }
 
 const StudentDashboard: React.FC = () => {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]); // Initialize with an empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isActive, setIsActive] = useState(true);  // State for student active status
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
   const router = useRouter();
@@ -48,7 +49,12 @@ const StudentDashboard: React.FC = () => {
       try {
         const data = await getStudentDashboard(token);
         console.log("contents==>", data);
-        setCourses(data);
+
+        if (data.is_active === false) {
+          setIsActive(false);  // Student is not active
+        } else {
+          setCourses(data.courses || []);  // Ensure courses is an array
+        }
       } catch (err: unknown) {
         if (err instanceof Error) {
           if (err.message.includes('401')) {
@@ -114,7 +120,7 @@ const StudentDashboard: React.FC = () => {
         />
       ) : (
         <video controls className="w-full h-auto mt-4 rounded-md" src={embedUrl}>
-          Your browser does not support the video tag.
+          Seu navegador não suporta a tag de vídeo.
         </video>
       );
     }
@@ -144,11 +150,20 @@ const StudentDashboard: React.FC = () => {
     return <div className="text-red-600 text-center mt-6">{error}</div>;
   }
 
+  // Display message if the student is not active
+  if (!isActive) {
+    return (
+      <div className="text-center mt-6 text-red-600">
+        Você não está ativo neste curso. Entre em contato com o tutor para ativar sua conta.
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-6 text-center">Painel do Estudante</h1>
 
-      {courses.length === 0 ? (
+      {courses.length === 0 ? (  // Safely check if courses is empty
         <p className="text-center text-gray-600">Você ainda não está inscrito em nenhum curso.</p>
       ) : (
         <div className="space-y-8">
@@ -158,21 +173,29 @@ const StudentDashboard: React.FC = () => {
               <p className="text-gray-600 mb-4">{course.overview}</p>
               <p className="text-gray-500 mb-4">Progresso do Curso: {course.progress}%</p>
               <div>
-                {course.modules.map((module, moduleIndex) => (
-                <details key={moduleIndex} className="mb-4">
-                    <summary className="cursor-pointer text-lg font-medium text-gray-700 hover:text-indigo-500">
-                    {module.order}. {module.title} ({module.completed_content_count}/{module.total_content_count})
-                    </summary>
-                    <p className="text-gray-500">{module.description}</p>
-                    <ul className="pl-4 mt-2 space-y-2">
-                      {module.contents.map((content, contentIndex) => (
-                        <li key={contentIndex} className="text-gray-600">
-                          <span className="font-semibold">{content.title}:</span> {renderContentItem(content)}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ))}
+                {course.modules?.length > 0 ? (  // Safely access modules and check length
+                  course.modules.map((module, moduleIndex) => (
+                    <details key={moduleIndex} className="mb-4">
+                      <summary className="cursor-pointer text-lg font-medium text-gray-700 hover:text-indigo-500">
+                        {module.order}. {module.title} ({module.completed_content_count}/{module.total_content_count})
+                      </summary>
+                      <p className="text-gray-500">{module.description}</p>
+                      <ul className="pl-4 mt-2 space-y-2">
+                        {module.contents?.length > 0 ? (  // Safely access contents
+                          module.contents.map((content, contentIndex) => (
+                            <li key={contentIndex} className="text-gray-600">
+                              <span className="font-semibold">{content.title}:</span> {renderContentItem(content)}
+                            </li>
+                          ))
+                        ) : (
+                          <p className="text-gray-600">Nenhum conteúdo disponível para este módulo.</p>
+                        )}
+                      </ul>
+                    </details>
+                  ))
+                ) : (
+                  <p className="text-gray-600">Nenhum módulo disponível para este curso.</p>
+                )}
               </div>
             </div>
           ))}

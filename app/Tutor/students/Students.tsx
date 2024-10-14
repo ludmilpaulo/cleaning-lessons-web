@@ -12,11 +12,15 @@ interface Course {
 
 interface StudentProgress {
   student: string;
+  student_id: number;      // Use the student_id from the backend
+  student_name: string;    // Use the student_name from the backend
+  student_email: string;   // Use the student_email from the backend
   progress_percentage: number;
   completed_modules: number;
   total_modules: number;
   completed_contents: number;
   total_contents: number;
+  is_active: boolean;
 }
 
 const Students: React.FC = () => {
@@ -28,18 +32,20 @@ const Students: React.FC = () => {
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
 
-  // Fetch the courses that the user owns
   useEffect(() => {
     const fetchCourses = async () => {
+      console.log("Fetching courses...");
       try {
         const response = await axios.get(`${baseAPI}/lessons/courses/user/`, {
           headers: {
-            Authorization: `Token ${token}`, // Pass the token to authenticate
+            Authorization: `Token ${token}`,
           },
         });
         setCourses(response.data);
+        console.log("Courses fetched:", response.data);
       } catch (err) {
-        setError("Failed to load courses.");
+        console.error("Error fetching courses:", err);
+        setError("Falha ao carregar os cursos.");
       } finally {
         setLoading(false);
       }
@@ -48,12 +54,12 @@ const Students: React.FC = () => {
     fetchCourses();
   }, [token]);
 
-  // Fetch the students' progress once a course is selected
   useEffect(() => {
     const fetchStudentProgress = async () => {
       if (selectedCourseId === null) return;
 
       setLoading(true);
+      console.log(`Fetching student progress for course ID: ${selectedCourseId}`);
       try {
         const response = await axios.get(
           `${baseAPI}/lessons/courses/${selectedCourseId}/students-progress/`,
@@ -64,8 +70,10 @@ const Students: React.FC = () => {
           }
         );
         setStudentProgress(response.data);
+        console.log("Student progress fetched:", response.data);
       } catch (err) {
-        setError("Failed to load students' progress.");
+        console.error("Error fetching student progress:", err);
+        setError("Falha ao carregar o progresso dos estudantes.");
       } finally {
         setLoading(false);
       }
@@ -74,10 +82,59 @@ const Students: React.FC = () => {
     fetchStudentProgress();
   }, [selectedCourseId, token]);
 
-  // Handle course selection
   const handleCourseSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCourseId(Number(event.target.value));
+    console.log(`Course selected: ${event.target.value}`);
   };
+
+  const handleActivateStudent = async (studentId: number) => {
+    console.log(`Activating student with ID: ${studentId}`);
+    try {
+      await axios.post(
+        `${baseAPI}/lessons/courses/${selectedCourseId}/activate-student/${studentId}/`,
+        {},
+        {
+          headers: {
+            Authorization: `Token ${token}`,  // Ensure this token is valid
+          },
+        }
+      );
+      setStudentProgress((prev) =>
+        prev.map((student) =>
+          student.student_id === studentId ? { ...student, is_active: true } : student
+        )
+      );
+      console.log(`Student with ID ${studentId} activated successfully`);
+    } catch (error) {
+      console.error(`Error activating student with ID ${studentId}:`, error);
+      setError("Falha ao ativar o estudante.");
+    }
+};
+
+const handleDeactivateStudent = async (studentId: number) => {
+    console.log(`Deactivating student with ID: ${studentId}`);
+    try {
+      await axios.post(
+        `${baseAPI}/students/courses/${selectedCourseId}/deactivate-student/${studentId}/`,  // Ensure this matches your Django URLs
+        {},
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        }
+      );
+      setStudentProgress((prev) =>
+        prev.map((student) =>
+          student.student_id === studentId ? { ...student, is_active: false } : student
+        )
+      );
+      console.log(`Student with ID ${studentId} deactivated successfully`);
+    } catch (error) {
+      console.error(`Error deactivating student with ID ${studentId}:`, error);
+      setError("Falha ao desativar o estudante.");
+    }
+};
+
 
   if (loading) {
     return <p>Carregando...</p>;
@@ -91,7 +148,6 @@ const Students: React.FC = () => {
     <div>
       <h2 className="text-2xl font-bold mb-4">Estudantes</h2>
 
-      {/* Course Selection */}
       <div className="mb-4">
         <label htmlFor="course-select" className="block text-lg font-medium text-gray-700">
           Selecione um curso:
@@ -113,18 +169,39 @@ const Students: React.FC = () => {
         </select>
       </div>
 
-      {/* Students Progress */}
       {selectedCourseId && (
         <div>
           <h3 className="text-xl font-bold mb-4">Progresso dos Estudantes</h3>
           {studentProgress.length > 0 ? (
             <ul className="space-y-4">
-              {studentProgress.map((student, index) => (
-                <li key={index} className="border p-4 rounded-md">
-                  <p className="font-semibold">Aluno: {student.student}</p>
+              {studentProgress.map((student) => (
+                <li key={student.student_id} className="border p-4 rounded-md">
+                 <p className="font-semibold">Aluno: {student.student}</p>
                   <p>Progresso: {student.progress_percentage.toFixed(2)}%</p>
-                  <p>Módulos Completados: {student.completed_modules} / {student.total_modules}</p>
-                  <p>Conteúdos Completados: {student.completed_contents} / {student.total_contents}</p>
+                  <p>
+                    Módulos Completos: {student.completed_modules} / {student.total_modules}
+                  </p>
+                  <p>
+                    Conteúdos Completos: {student.completed_contents} / {student.total_contents}
+                  </p>
+                  <p>Status: {student.is_active ? "Ativo" : "Desativado"}</p>
+                  <div className="flex space-x-2 mt-2">
+                    {student.is_active ? (
+                      <button
+                        className="bg-red-500 text-white px-3 py-1 rounded"
+                        onClick={() => handleDeactivateStudent(student.student_id)}
+                      >
+                        Desativar
+                      </button>
+                    ) : (
+                      <button
+                        className="bg-green-500 text-white px-3 py-1 rounded"
+                        onClick={() => handleActivateStudent(student.student_id)}
+                      >
+                        Ativar
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
