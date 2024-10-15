@@ -47,11 +47,7 @@ const Navbar: React.FC = () => {
                   <FaHome className="mr-2" /> Início
                 </span>
               </Link>
-              <Link href="/CourseList">
-                <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-                  <FaBook className="mr-2" /> Cursos
-                </span>
-              </Link>
+             
               <Link href="/About">
                 <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
                   <FaInfoCircle className="mr-2" /> Sobre
@@ -74,11 +70,15 @@ const Navbar: React.FC = () => {
                       </span>
                     </Link>
                   ) : (
-                    <Link href="/DashboardPage">
-                      <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-                        <FaUserCircle className="mr-2" /> Meu Painel
-                      </span>
-                    </Link>
+                    <><Link href="/CourseList">
+                        <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                          <FaBook className="mr-2" /> Cursos
+                        </span>
+                      </Link><Link href="/DashboardPage">
+                          <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                            <FaUserCircle className="mr-2" /> Meu Painel
+                          </span>
+                        </Link></>
                   )}
 
                   <button
