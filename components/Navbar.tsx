@@ -52,7 +52,7 @@ const Navbar: React.FC = () => {
                   <FaBook className="mr-2" /> Cursos
                 </span>
               </Link>
-              <Link href="/about">
+              <Link href="/About">
                 <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
                   <FaInfoCircle className="mr-2" /> Sobre
                 </span>
