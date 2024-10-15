@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
     <footer className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-8 md:space-y-0">
-          
+
           {/* Branding Section */}
           <div className="flex flex-col space-y-2">
             <h2 className="text-2xl font-bold">Aprenda Mas</h2>
@@ -18,7 +18,7 @@ const Footer: React.FC = () => {
 
           {/* Quick Links */}
           <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:space-x-8">
-            <Link href="/about">
+            <Link href="/About">
               <span className="text-sm font-medium hover:text-gray-300 cursor-pointer transition-all">
                 Sobre Nós
               </span>
