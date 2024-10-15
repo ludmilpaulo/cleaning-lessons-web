@@ -1,29 +1,37 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { Transition } from '@headlessui/react';
-import { getStudentDashboard } from '@/services/studentService';
+import { getStudentDashboard, markContentComplete, markModuleAsComplete } from '@/services/studentService'; 
 import { RootState } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { baseAPI } from '@/utils/variables';
+import { AiOutlineCheckCircle } from 'react-icons/ai';  // Use icons for better UI
 
 interface Content {
+  id: number;
   title: string;
   content?: string;
   file?: string;
   url?: string;
+  completed: boolean;
 }
 
 interface Module {
+  id: number;
   title: string;
-  description: string;
-  order: number;
+  description?: string; // Mark as optional if it's sometimes missing
+  order?: number;       // Same for order
   completed_content_count: number;
   total_content_count: number;
   contents: Content[];
+  completed: boolean;
 }
 
+
 interface Course {
+  id: number;
   title: string;
   overview: string;
   progress: number;
@@ -31,10 +39,10 @@ interface Course {
 }
 
 const StudentDashboard: React.FC = () => {
-  const [courses, setCourses] = useState<Course[]>([]); // Initialize with an empty array
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isActive, setIsActive] = useState(true);  // State for student active status
+  const [isActive, setIsActive] = useState(true);
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
   const router = useRouter();
@@ -44,88 +52,197 @@ const StudentDashboard: React.FC = () => {
       router.push('/Login');
       return;
     }
-
+  
     const fetchDashboard = async () => {
       try {
         const data = await getStudentDashboard(token);
-        console.log("contents==>", data);
-
+        console.log("API response data:", data); // Add this line to debug
         if (data.is_active === false) {
-          setIsActive(false);  // Student is not active
+          setIsActive(false);
         } else {
-          setCourses(data.courses || []);  // Ensure courses is an array
+          setCourses(data.courses || []);
         }
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          if (err.message.includes('401')) {
-            setError('Sua sessão expirou. Faça login novamente.');
-            router.push('/Login');
-          } else if (err.message.includes('403')) {
-            setError('Você não tem permissão para acessar este conteúdo.');
-          } else {
-            setError('Erro ao carregar os dados do painel.');
-          }
-        }
+      } catch (err) {
+        setError('Erro ao carregar os dados do painel.');
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchDashboard();
   }, [token, router]);
+  
 
-  const renderContentItem = (content: Content) => {
-    if (content.content) {
-      return <p className="text-gray-800">{content.content}</p>;
-    } else if (content.file) {
-      const fileType = content.file.split('.').pop();
-      if (fileType === 'pdf' || fileType === 'docx') {
-        return (
-          <a
-            href={content.file}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-600 hover:underline"
+  const handleContentComplete = async (courseId: number, contentId: number, moduleId: number) => {
+    if (!token) {
+      console.error("Token is missing. Unable to complete content.");
+      return; // You can add more error handling here if needed.
+    }
+  
+    try {
+      await markContentComplete(courseId, contentId, token);
+      setCourses((prevCourses) =>
+        prevCourses.map((course) =>
+          course.id === courseId
+            ? {
+                ...course,
+                modules: course.modules.map((module) =>
+                  module.id === moduleId
+                    ? {
+                        ...module,
+                        contents: module.contents.map((content) =>
+                          content.id === contentId ? { ...content, completed: true } : content
+                        ),
+                        completed_content_count: module.completed_content_count + 1,
+                      }
+                    : module
+                ),
+              }
+            : course
+        )
+      );
+    } catch (err) {
+      console.error("Erro ao marcar o conteúdo como completo:", err);
+    }
+  };
+  
+
+  const handleModuleComplete = async (courseId: number, moduleId: number) => {
+    if (!token) {
+      console.error("Token is missing. Unable to complete module.");
+      return; // Return early if token is not available
+    }
+  
+    try {
+      await markModuleAsComplete(courseId, moduleId, token);
+      setCourses((prevCourses) =>
+        prevCourses.map((course) =>
+          course.id === courseId
+            ? {
+                ...course,
+                modules: course.modules.map((module) =>
+                  module.id === moduleId ? { ...module, completed: true } : module
+                ),
+              }
+            : course
+        )
+      );
+    } catch (err) {
+      console.error("Erro ao marcar o módulo como completo:", err);
+    }
+  };
+  
+
+  const renderContentItem = (content: Content, courseId: number, moduleId: number) => {
+    const isCompleted = content.completed;
+    return (
+      <div className="flex items-center space-x-4 mb-2">
+        {content.content ? (
+          <p className={`text-gray-800 ${isCompleted ? 'line-through text-green-500' : ''}`}>
+            {content.content}
+          </p>
+        ) : content.file ? (
+          renderFileItem(content.file, content.title)
+        ) : content.url ? (
+          renderVideoItem(content.url, content.title)
+        ) : (
+          <p>Tipo de conteúdo desconhecido.</p>
+        )}
+
+        {!isCompleted && (
+          <button
+            className="text-green-500 hover:text-green-700 transition"
+            onClick={() => handleContentComplete(courseId, content.id, moduleId)}
+            aria-label="Marcar como completo"
           >
-            {content.title} - Baixar Arquivo
-          </a>
-        );
-      } else {
-        return (
-          <div className="relative w-full h-64 mt-4">
-            <Image
-              src={content.file}
-              alt={content.title}
-              layout="fill"
-              objectFit="contain"
-              className="rounded-md"
-            />
-          </div>
-        );
-      }
-    } else if (content.url) {
-      const isYouTube = content.url.includes("youtube.com") || content.url.includes("youtu.be");
-      const embedUrl = isYouTube
-        ? content.url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")
-        : content.url;
+            <AiOutlineCheckCircle size={24} />
+          </button>
+        )}
+        {isCompleted && (
+          <span className="text-green-500">
+            <AiOutlineCheckCircle size={24} />
+          </span>
+        )}
+      </div>
+    );
+  };
 
-      return isYouTube ? (
-        <iframe
-          className="w-full h-64 mt-4 rounded-md"
-          src={embedUrl}
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          title={content.title}
-        />
-      ) : (
-        <video controls className="w-full h-auto mt-4 rounded-md" src={embedUrl}>
-          Seu navegador não suporta a tag de vídeo.
-        </video>
+  const renderFileItem = (file: string, title: string) => {
+    const fileType = file.split('.').pop();
+    if (['png', 'jpg', 'jpeg', 'gif'].includes(fileType || '')) {
+      return (
+        <div className="relative w-full h-64 mt-4">
+          <Image
+            src={`${baseAPI}${file}`}
+            alt={title}
+            layout="fill"
+            objectFit="contain"
+            className="rounded-md"
+          />
+        </div>
       );
     }
+    if (['pdf', 'docx', 'xlsx', 'txt'].includes(fileType || '')) {
+      return (
+        <a
+          href={`${baseAPI}${file}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 hover:underline"
+        >
+          {title} - Baixar Arquivo
+        </a>
+      );
+    }
+  };
 
-    return <p>Tipo de conteúdo desconhecido.</p>;
+  const renderVideoItem = (url: string, title: string) => {
+    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+    const embedUrl = isYouTube
+      ? url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")
+      : url;
+
+    return isYouTube ? (
+      <iframe
+        className="w-full h-64 mt-4 rounded-md shadow-md"
+        src={embedUrl}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title={title}
+      />
+    ) : (
+      <video controls className="w-full h-auto mt-4 rounded-md" src={embedUrl}>
+        Seu navegador não suporta a tag de vídeo.
+      </video>
+    );
+  };
+
+  const renderModule = (module: Module, courseId: number) => {
+    const moduleProgress = Math.floor((module.completed_content_count / module.total_content_count) * 100);
+    return (
+      <details key={module.id} className="mb-4 border-b pb-2">
+        <summary className="cursor-pointer text-lg font-medium text-gray-700 hover:text-indigo-500">
+          {module.order}. {module.title} ({moduleProgress}% concluído)
+        </summary>
+        <p className="text-gray-500">{module.description}</p>
+        <ul className="pl-4 mt-2 space-y-2">
+          {module.contents.map((content) => (
+            <li key={content.id} className="text-gray-600 border-b pb-2">
+              {renderContentItem(content, courseId, module.id)}
+            </li>
+          ))}
+        </ul>
+        {!module.completed && (
+          <button
+            className="mt-2 text-green-500 hover:text-green-700 transition"
+            onClick={() => handleModuleComplete(courseId, module.id)}
+          >
+            Marcar Módulo Completo
+          </button>
+        )}
+      </details>
+    );
   };
 
   if (loading) {
@@ -150,7 +267,6 @@ const StudentDashboard: React.FC = () => {
     return <div className="text-red-600 text-center mt-6">{error}</div>;
   }
 
-  // Display message if the student is not active
   if (!isActive) {
     return (
       <div className="text-center mt-6 text-red-600">
@@ -161,41 +277,20 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-6 text-center">Painel do Estudante</h1>
-
-      {courses.length === 0 ? (  // Safely check if courses is empty
+      <h1 className="text-4xl font-bold mb-6 text-center text-gray-900">Painel do Estudante</h1>
+      {courses.length === 0 ? (
         <p className="text-center text-gray-600">Você ainda não está inscrito em nenhum curso.</p>
       ) : (
         <div className="space-y-8">
           {courses.map((course, courseIndex) => (
-            <div key={courseIndex} className="border rounded-lg p-6 shadow-lg">
+            <div key={courseIndex} className="border rounded-lg p-6 shadow-lg bg-white">
               <h2 className="text-2xl font-semibold mb-4 text-indigo-600">{course.title}</h2>
               <p className="text-gray-600 mb-4">{course.overview}</p>
-              <p className="text-gray-500 mb-4">Progresso do Curso: {course.progress}%</p>
+              <p className="text-gray-500 mb-4">
+                Progresso do Curso: <span className="font-bold">{course.progress}%</span>
+              </p>
               <div>
-                {course.modules?.length > 0 ? (  // Safely access modules and check length
-                  course.modules.map((module, moduleIndex) => (
-                    <details key={moduleIndex} className="mb-4">
-                      <summary className="cursor-pointer text-lg font-medium text-gray-700 hover:text-indigo-500">
-                        {module.order}. {module.title} ({module.completed_content_count}/{module.total_content_count})
-                      </summary>
-                      <p className="text-gray-500">{module.description}</p>
-                      <ul className="pl-4 mt-2 space-y-2">
-                        {module.contents?.length > 0 ? (  // Safely access contents
-                          module.contents.map((content, contentIndex) => (
-                            <li key={contentIndex} className="text-gray-600">
-                              <span className="font-semibold">{content.title}:</span> {renderContentItem(content)}
-                            </li>
-                          ))
-                        ) : (
-                          <p className="text-gray-600">Nenhum conteúdo disponível para este módulo.</p>
-                        )}
-                      </ul>
-                    </details>
-                  ))
-                ) : (
-                  <p className="text-gray-600">Nenhum módulo disponível para este curso.</p>
-                )}
+                {course.modules.map((module) => renderModule(module, course.id))}
               </div>
             </div>
           ))}
