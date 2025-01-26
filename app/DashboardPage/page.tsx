@@ -6,6 +6,7 @@ import { RootState } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { FiLoader } from "react-icons/fi";
+import { baseAPI } from "@/utils/variables";
 
 interface Content {
   id: number;
@@ -41,7 +42,7 @@ const StudentDashboard: React.FC = () => {
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
   const router = useRouter();
-  const baseAPI = "http://localhost:8000"; // Replace with your backend URL
+  
 
   useEffect(() => {
     if (!token) {
@@ -110,6 +111,28 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
+  const renderVideoItem = (url: string, title: string) => {
+    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+    const embedUrl = isYouTube
+      ? url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")
+      : url;
+
+    return isYouTube ? (
+      <iframe
+        className="w-full h-64 mt-4 rounded-md shadow-md"
+        src={embedUrl}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title={title}
+      />
+    ) : (
+      <video controls className="w-full h-auto mt-4 rounded-md" src={embedUrl}>
+        Seu navegador não suporta a tag de vídeo.
+      </video>
+    );
+  };
+
   const renderContentItem = (content: Content) => {
     if (content.content) {
       return <p className="text-gray-700">{content.content}</p>; // Render text
@@ -127,15 +150,7 @@ const StudentDashboard: React.FC = () => {
       ); // Render file link
     }
     if (content.url) {
-      return (
-        <iframe
-          className="w-full h-64 mt-4 rounded-md shadow-md"
-          src={content.url}
-          title={content.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        ></iframe>
-      ); // Render video
+      return renderVideoItem(content.url, content.title); // Render video using renderVideoItem
     }
     return <p className="text-gray-500">Conteúdo inválido</p>;
   };
