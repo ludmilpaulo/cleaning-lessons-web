@@ -32,6 +32,30 @@ const Students: React.FC = () => {
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
 
+  const handleDeleteStudent = async (studentId: number) => {
+    console.log(`Deleting student with ID: ${studentId}`);
+    try {
+      await axios.post(
+        `${baseAPI}/lessons/courses/${selectedCourseId}/remove-student/${studentId}/`,
+        {},
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        }
+      );
+      // Remove the student from the UI
+      setStudentProgress((prev) =>
+        prev.filter((student) => student.student_id !== studentId)
+      );
+      console.log(`Student with ID ${studentId} removed successfully`);
+    } catch (error) {
+      console.error(`Error deleting student with ID ${studentId}:`, error);
+      setError("Falha ao remover o estudante.");
+    }
+  };
+  
+
   useEffect(() => {
     const fetchCourses = async () => {
       console.log("Fetching courses...");
@@ -174,36 +198,39 @@ const handleDeactivateStudent = async (studentId: number) => {
           <h3 className="text-xl font-bold mb-4">Progresso dos Estudantes</h3>
           {studentProgress.length > 0 ? (
             <ul className="space-y-4">
-              {studentProgress.map((student) => (
-                <li key={student.student_id} className="border p-4 rounded-md">
-                 <p className="font-semibold">Aluno: {student.student}</p>
-                  <p>Progresso: {student.progress_percentage.toFixed(2)}%</p>
-                  <p>
-                    Módulos Completos: {student.completed_modules} / {student.total_modules}
-                  </p>
-                  <p>
-                    Conteúdos Completos: {student.completed_contents} / {student.total_contents}
-                  </p>
-                  <p>Status: {student.is_active ? "Ativo" : "Desativado"}</p>
-                  <div className="flex space-x-2 mt-2">
-                    {student.is_active ? (
-                      <button
-                        className="bg-red-500 text-white px-3 py-1 rounded"
-                        onClick={() => handleDeactivateStudent(student.student_id)}
-                      >
-                        Desativar
-                      </button>
-                    ) : (
-                      <button
-                        className="bg-green-500 text-white px-3 py-1 rounded"
-                        onClick={() => handleActivateStudent(student.student_id)}
-                      >
-                        Ativar
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
+             {studentProgress.map((student) => (
+  <li key={student.student_id} className="border p-4 rounded-md">
+    <p className="font-semibold">Aluno: {student.student}</p>
+    <p>Progresso: {student.progress_percentage.toFixed(2)}%</p>
+    <p>Módulos Completos: {student.completed_modules} / {student.total_modules}</p>
+    <p>Conteúdos Completos: {student.completed_contents} / {student.total_contents}</p>
+    <p>Status: {student.is_active ? "Ativo" : "Desativado"}</p>
+    <div className="flex space-x-2 mt-2">
+      {student.is_active ? (
+        <button
+          className="bg-red-500 text-white px-3 py-1 rounded"
+          onClick={() => handleDeactivateStudent(student.student_id)}
+        >
+          Desativar
+        </button>
+      ) : (
+        <button
+          className="bg-green-500 text-white px-3 py-1 rounded"
+          onClick={() => handleActivateStudent(student.student_id)}
+        >
+          Ativar
+        </button>
+      )}
+      <button
+        className="bg-gray-500 text-white px-3 py-1 rounded"
+        onClick={() => handleDeleteStudent(student.student_id)}
+      >
+        Remover
+      </button>
+    </div>
+  </li>
+))}
+
             </ul>
           ) : (
             <p className="text-gray-600">Nenhum estudante inscrito no curso.</p>

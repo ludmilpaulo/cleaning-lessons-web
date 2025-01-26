@@ -7,8 +7,8 @@ import { RootState } from "@/redux/store";
 import { useSelector } from "react-redux";
 import AddModulesAndContents from "./AddModulesAndContents";
 import AddModules from "./AddModules";
-import Image from "next/image";
 import Modal from "./Modal";
+import Image from "next/image";
 import { FiLoader } from "react-icons/fi";
 import {
   AiOutlinePlus,
@@ -76,12 +76,9 @@ const CourseDetails: React.FC = () => {
   const [contentTypes, setContentTypes] = useState<ContentTypes | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-  const [moduleToEdit, setModuleToEdit] = useState<Module | null>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-
   const [notification, setNotification] = useState<Notification | null>(null);
+  const [contentToEdit, setContentToEdit] = useState<Content | null>(null);
+  const [editContentModalOpen, setEditContentModalOpen] = useState(false);
 
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
@@ -132,7 +129,7 @@ const CourseDetails: React.FC = () => {
         {
           headers: {
             Authorization: `Token ${token}`,
-          }
+          },
         }
       );
       setContents(responseContents.data);
@@ -143,20 +140,28 @@ const CourseDetails: React.FC = () => {
     }
   };
 
-  const handleEditModule = (module: Module) => {
-    setModuleToEdit(module);
-    setNewTitle(module.title);
-    setNewDescription(module.description);
-    setEditModalOpen(true);
+  const handleDeleteContent = async (contentId: number) => {
+    try {
+      await axios.delete(`${baseAPI}/lessons/contents/${contentId}/`, {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+      setContents(contents.filter((content) => content.id !== contentId));
+      setNotification({ type: "success", message: "Conteúdo deletado com sucesso." });
+    } catch (err) {
+      setNotification({ type: "error", message: "Falha ao deletar conteúdo." });
+    }
   };
 
-  const handleEditModuleSubmit = async () => {
+  const handleEditContentSubmit = async (updatedContentData: ContentData) => {
+    if (!contentToEdit) return;
+
     try {
       await axios.put(
-        `${baseAPI}/lessons/courses/${courseId}/modules/${moduleToEdit?.id}/`,
+        `${baseAPI}/lessons/contents/${contentToEdit.id}/`,
         {
-          title: newTitle,
-          description: newDescription,
+          content_data: updatedContentData,
         },
         {
           headers: {
@@ -164,39 +169,19 @@ const CourseDetails: React.FC = () => {
           },
         }
       );
-
-      setModules(
-        modules.map((mod) =>
-          mod.id === moduleToEdit?.id
-            ? { ...mod, title: newTitle, description: newDescription }
-            : mod
+      setContents(
+        contents.map((content) =>
+          content.id === contentToEdit.id
+            ? { ...content, content_data: updatedContentData }
+            : content
         )
       );
-      setEditModalOpen(false);
+      setNotification({ type: "success", message: "Conteúdo editado com sucesso." });
+      setEditContentModalOpen(false);
     } catch (err) {
-      setError("Falha ao editar módulo.");
+      setNotification({ type: "error", message: "Falha ao editar conteúdo." });
     }
   };
-
-  const handleDeleteModule = async (moduleId: number) => {
-    try {
-      await axios.delete(`${baseAPI}/lessons/courses/${courseId}/modules/${moduleId}/`, {
-        headers: {
-          Authorization: `Token ${token}`,
-        },
-      });
-      setModules(modules.filter((mod) => mod.id !== moduleId));
-    } catch (error) {
-      setError("Falha ao deletar módulo.");
-    }
-  };
-
-  useEffect(() => {
-    if (notification) {
-      const timeout = setTimeout(() => setNotification(null), 5000);
-      return () => clearTimeout(timeout);
-    }
-  }, [notification]);
 
   const renderNotification = () => {
     if (!notification) return null;
@@ -322,16 +307,6 @@ const CourseDetails: React.FC = () => {
               >
                 <div className="flex justify-between items-center">
                   <span onClick={() => handleModuleClick(mod)}>{mod.title}</span>
-                  <div className="flex space-x-2">
-                    <AiOutlineEdit
-                      className="text-indigo-500 cursor-pointer"
-                      onClick={() => handleEditModule(mod)}
-                    />
-                    <AiOutlineDelete
-                      className="text-red-500 cursor-pointer"
-                      onClick={() => handleDeleteModule(mod.id)}
-                    />
-                  </div>
                 </div>
               </li>
             ))}
@@ -351,6 +326,7 @@ const CourseDetails: React.FC = () => {
               onContentAdded={() => handleModuleClick(selectedModule)} // Refetch contents after adding
             />
           )}
+
         </div>
 
         {selectedModule ? (
@@ -363,6 +339,19 @@ const CourseDetails: React.FC = () => {
                 contents.map((content) => (
                   <li key={content.id} className="p-2 border-b">
                     {renderContentItem(content)}
+                    <div className="flex space-x-2 mt-2">
+                      <AiOutlineEdit
+                        className="text-indigo-500 cursor-pointer"
+                        onClick={() => {
+                          setContentToEdit(content);
+                          setEditContentModalOpen(true);
+                        }}
+                      />
+                      <AiOutlineDelete
+                        className="text-red-500 cursor-pointer"
+                        onClick={() => handleDeleteContent(content.id)}
+                      />
+                    </div>
                   </li>
                 ))
               ) : (
@@ -386,31 +375,31 @@ const CourseDetails: React.FC = () => {
         </Modal>
       )}
 
-      {editModalOpen && (
-        <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)}>
+      {editContentModalOpen && contentToEdit && (
+        <Modal isOpen={editContentModalOpen} onClose={() => setEditContentModalOpen(false)}>
           <div className="p-4">
-            <h3 className="text-xl font-bold mb-4">Editar Módulo</h3>
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Título do Módulo"
-              className="mb-2 p-2 w-full border rounded"
-            />
+            <h3 className="text-xl font-bold mb-4">Editar Conteúdo</h3>
             <textarea
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="Descrição do Módulo"
-              className="mb-4 p-2 w-full border rounded"
+              value={(contentToEdit.content_data as TextContent).content || ""}
+              onChange={(e) =>
+                setContentToEdit({
+                  ...contentToEdit,
+                  content_data: { ...(contentToEdit.content_data as TextContent), content: e.target.value },
+                })
+              }
+              className="mb-2 p-2 w-full border rounded"
             />
             <div className="flex justify-end space-x-4">
               <button
                 className="bg-gray-300 px-4 py-2 rounded"
-                onClick={() => setEditModalOpen(false)}
+                onClick={() => setEditContentModalOpen(false)}
               >
                 Cancelar
               </button>
-              <button className="bg-indigo-500 text-white px-4 py-2 rounded" onClick={handleEditModuleSubmit}>
+              <button
+                className="bg-indigo-500 text-white px-4 py-2 rounded"
+                onClick={() => handleEditContentSubmit(contentToEdit.content_data)}
+              >
                 Salvar Alterações
               </button>
             </div>

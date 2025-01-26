@@ -34,7 +34,7 @@ const Navbar: React.FC = () => {
           <div className="flex items-center">
             <Link href="/">
               <span className="text-white text-2xl font-bold cursor-pointer">
-                Aprenda Mas
+                Aprenda Mais
               </span>
             </Link>
           </div>
