@@ -57,7 +57,7 @@ const Footer: React.FC = () => {
 
         {/* Copyright Section */}
         <div className="text-center text-sm mt-10 border-t border-white border-opacity-30 pt-4">
-          <p>&copy; 2024 Minha Plataforma. Todos os direitos reservados.</p>
+          <p>&copy; 2025 Minha Plataforma. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>

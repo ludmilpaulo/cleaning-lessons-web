@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Transition } from "@headlessui/react";
-import { getStudentDashboard, markContentComplete, markModuleAsComplete } from "@/services/studentService";
+import { getStudentDashboard } from "@/services/studentService";
 import { RootState } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { baseAPI } from "@/utils/variables";
-import { AiOutlineCheckCircle } from "react-icons/ai";
+import { FiLoader } from "react-icons/fi";
 
 interface Content {
   id: number;
@@ -24,8 +21,6 @@ interface Module {
   title: string;
   description?: string;
   order?: number;
-  completed_content_count: number;
-  total_content_count: number;
   contents: Content[];
   completed: boolean;
 }
@@ -46,6 +41,7 @@ const StudentDashboard: React.FC = () => {
   const auth_user = useSelector((state: RootState) => state.auth.user);
   const token = auth_user?.token;
   const router = useRouter();
+  const baseAPI = "http://localhost:8000"; // Replace with your backend URL
 
   useEffect(() => {
     if (!token) {
@@ -56,14 +52,16 @@ const StudentDashboard: React.FC = () => {
     const fetchDashboard = async () => {
       try {
         const data = await getStudentDashboard(token);
-        console.log("API response data:", data); // Debugging log
-        if (data.is_active === false) {
+        console.log("Fetched Dashboard Data:", data); // Debug fetched data
+        if (!data.is_active) {
           setIsActive(false);
         } else {
           setCourses(data.courses || []);
+          console.log("Courses Set in State:", data.courses); // Debug courses
         }
-      } catch {
-        setError("Erro ao carregar os dados do painel.");
+      } catch (err) {
+        setError("Ocorreu um erro ao carregar o painel.");
+        console.error("Error fetching dashboard:", err); // Debug errors
       } finally {
         setLoading(false);
       }
@@ -72,41 +70,29 @@ const StudentDashboard: React.FC = () => {
     fetchDashboard();
   }, [token, router]);
 
-  const handleContentComplete = async (courseId: number, contentId: number, moduleId: number) => {
-    if (!token) return;
-
-    try {
-      await markContentComplete(courseId, contentId, token);
-      setCourses((prevCourses) =>
-        prevCourses.map((course) =>
-          course.id === courseId
-            ? {
-                ...course,
-                modules: course.modules.map((module) =>
-                  module.id === moduleId
-                    ? {
-                        ...module,
-                        contents: module.contents.map((content) =>
-                          content.id === contentId ? { ...content, completed: true } : content
-                        ),
-                        completed_content_count: module.completed_content_count + 1,
-                      }
-                    : module
-                ),
-              }
-            : course
-        )
-      );
-    } catch (err) {
-      console.error("Erro ao marcar o conteúdo como completo:", err);
-    }
-  };
-
   const handleModuleComplete = async (courseId: number, moduleId: number) => {
+    console.log("handleModuleComplete called with:", { courseId, moduleId }); // Debugging IDs
     if (!token) return;
 
     try {
-      await markModuleAsComplete(courseId, moduleId, token);
+      const response = await fetch(`${baseAPI}/lessons/mark_module_complete/${courseId}/${moduleId}/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API Response Error:", errorData); // Debug API error
+        throw new Error(errorData.error || "Erro ao marcar o módulo como completo.");
+      }
+
+      const data = await response.json();
+      console.log("API Success Response:", data); // Debug API success response
+
+      // Update the frontend state to mark the module as completed
       setCourses((prevCourses) =>
         prevCourses.map((course) =>
           course.id === courseId
@@ -119,179 +105,111 @@ const StudentDashboard: React.FC = () => {
             : course
         )
       );
-    } catch (err) {
-      console.error("Erro ao marcar o módulo como completo:", err);
+    } catch  {
+      console.error("Erro ao marcar o módulo como completo:");
     }
   };
 
-  const renderContentItem = (content: Content, courseId: number, moduleId: number) => {
-    const isCompleted = content.completed;
-    return (
-      <div className="flex items-center space-x-4 mb-2">
-        {content.content ? (
-          <p className={`text-gray-800 ${isCompleted ? "line-through text-green-500" : ""}`}>
-            {content.content}
-          </p>
-        ) : content.file ? (
-          renderFileItem(content.file, content.title)
-        ) : content.url ? (
-          renderVideoItem(content.url, content.title)
-        ) : (
-          <p>Conteúdo inválido ou ausente.</p>
-        )}
+  const renderContentItem = (content: Content) => {
+    if (content.content) {
+      return <p className="text-gray-700">{content.content}</p>; // Render text
+    }
+    if (content.file) {
+      return (
+        <a
+          href={`${baseAPI}${content.file}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 hover:underline"
+        >
+          Baixar Arquivo
+        </a>
+      ); // Render file link
+    }
+    if (content.url) {
+      return (
+        <iframe
+          className="w-full h-64 mt-4 rounded-md shadow-md"
+          src={content.url}
+          title={content.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        ></iframe>
+      ); // Render video
+    }
+    return <p className="text-gray-500">Conteúdo inválido</p>;
+  };
 
-        {!isCompleted && (
+  const renderModule = (module: Module, courseId: number) => {
+    console.log("Rendering Module:", { courseId, moduleId: module.id }); // Debugging module rendering
+    return (
+      <div key={module.id} className="mb-6 bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-2 text-indigo-600">
+          {module.order}. {module.title}
+        </h3>
+        <p className="text-sm text-gray-500">{module.description || "Sem descrição disponível."}</p>
+        <div className="mt-4 space-y-4">
+          {module.contents.map((content) => (
+            <div key={content.id} className="border-b pb-2">
+              {renderContentItem(content)}
+            </div>
+          ))}
+        </div>
+        {!module.completed && (
           <button
-            className="text-green-500 hover:text-green-700 transition"
-            onClick={() => handleContentComplete(courseId, content.id, moduleId)}
-            aria-label="Marcar como completo"
+            onClick={() => handleModuleComplete(courseId, module.id)} // Pass courseId and moduleId
+            className="mt-4 w-full text-center text-white bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg transition"
           >
-            <AiOutlineCheckCircle size={24} />
+            Marcar Módulo Completo
           </button>
-        )}
-        {isCompleted && (
-          <span className="text-green-500">
-            <AiOutlineCheckCircle size={24} />
-          </span>
         )}
       </div>
     );
   };
 
-  const renderFileItem = (file: string, title: string) => {
-    const fileType = file.split(".").pop();
-    if (["png", "jpg", "jpeg", "gif"].includes(fileType || "")) {
-      return (
-        <div className="relative w-full h-64 mt-4">
-          <Image
-            src={`${baseAPI}${file}`}
-            alt={title}
-            layout="fill"
-            objectFit="contain"
-            className="rounded-md"
-          />
-        </div>
-      );
-    }
-    if (["pdf", "docx", "xlsx", "txt"].includes(fileType || "")) {
-      return (
-        <a
-          href={`${baseAPI}${file}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-indigo-600 hover:underline"
-        >
-          {title} - Baixar Arquivo
-        </a>
-      );
-    }
-  };
-
-  const renderVideoItem = (url: string, title: string) => {
-    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
-    const embedUrl = isYouTube
-      ? url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")
-      : url;
-
-    return isYouTube ? (
-      <iframe
-        className="w-full h-64 mt-4 rounded-md shadow-md"
-        src={embedUrl}
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        title={title}
-      />
-    ) : (
-      <video controls className="w-full h-auto mt-4 rounded-md" src={embedUrl}>
-        Seu navegador não suporta a tag de vídeo.
-      </video>
-    );
-  };
-
-  const renderModule = (module: Module, courseId: number) => {
-    const validCompletedCount = module.completed_content_count || 0;
-    const validTotalCount = module.total_content_count || 1; // Prevent division by zero
-    const moduleProgress = Math.floor((validCompletedCount / validTotalCount) * 100);
-
-    return (
-      <details key={module.id} className="mb-4 border-b pb-2">
-        <summary className="cursor-pointer text-lg font-medium text-gray-700 hover:text-indigo-500">
-          {module.order}. {module.title} ({moduleProgress}% concluído)
-        </summary>
-        <p className="text-gray-500">{module.description || "Sem descrição disponível."}</p>
-        {module.contents.length === 0 ? (
-          <p className="text-gray-500">Nenhum conteúdo disponível neste módulo.</p>
-        ) : (
-          <ul className="pl-4 mt-2 space-y-2">
-            {module.contents.map((content) => (
-              <li key={content.id} className="text-gray-600 border-b pb-2">
-                {renderContentItem(content, courseId, module.id)}
-              </li>
-            ))}
-          </ul>
-        )}
-        {!module.completed && (
-          <button
-            className="mt-2 text-green-500 hover:text-green-700 transition"
-            onClick={() => handleModuleComplete(courseId, module.id)}
-          >
-            Marcar Módulo Completo
-          </button>
-        )}
-      </details>
-    );
-  };
-
   if (loading) {
     return (
-      <Transition
-        show={loading}
-        enter="transition-opacity duration-300"
-        enterFrom="opacity-0"
-        enterTo="opacity-100"
-        leave="transition-opacity duration-300"
-        leaveFrom="opacity-100"
-        leaveTo="opacity-0"
-      >
-        <div className="fixed top-0 left-0 z-50 flex items-center justify-center w-full h-full bg-black bg-opacity-50">
-          <div className="w-16 h-16 border-t-4 border-b-4 border-blue-500 rounded-full animate-spin"></div>
-        </div>
-      </Transition>
+      <div className="flex justify-center items-center h-screen">
+        <FiLoader className="text-indigo-600 text-5xl animate-spin" />
+      </div>
     );
   }
 
   if (error) {
-    return <div className="text-red-600 text-center mt-6">{error}</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
   }
 
   if (!isActive) {
     return (
-      <div className="text-center mt-6 text-red-600">
-        Você não está ativo neste curso. Entre em contato com o tutor para ativar sua conta.
+      <div className="text-center text-red-600 mt-8">
+        Você não está ativo neste curso. Entre em contato com o administrador.
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-6 text-center text-gray-900">Painel do Estudante</h1>
+      <h1 className="text-4xl font-bold text-center text-indigo-600 mb-8">Painel do Estudante</h1>
       {courses.length === 0 ? (
-        <p className="text-center text-gray-600">Você ainda não está inscrito em nenhum curso.</p>
+        <p className="text-center text-gray-500">Nenhum curso disponível.</p>
       ) : (
         <div className="space-y-8">
-          {courses.map((course, courseIndex) => (
-            <div key={courseIndex} className="border rounded-lg p-6 shadow-lg bg-white">
-              <h2 className="text-2xl font-semibold mb-4 text-indigo-600">{course.title}</h2>
-              <p className="text-gray-600 mb-4">{course.overview}</p>
-              <p className="text-gray-500 mb-4">
-                Progresso do Curso: <span className="font-bold">{course.progress || 0}%</span>
-              </p>
-              <div>
-                {course.modules.map((module) => renderModule(module, course.id))}
+          {courses.map((course) => {
+            console.log("Rendering Course:", course.id); // Debug course rendering
+            return (
+              <div key={course.id} className="bg-gray-50 shadow-md rounded-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900">{course.title}</h2>
+                <p className="text-gray-500">{course.overview}</p>
+                <div className="mt-4">
+                  {course.modules.map((module) => renderModule(module, course.id))} {/* Pass course.id */}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

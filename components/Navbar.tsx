@@ -47,17 +47,8 @@ const Navbar: React.FC = () => {
                   <FaHome className="mr-2" /> Início
                 </span>
               </Link>
-             
-              <Link href="/About">
-                <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-                  <FaInfoCircle className="mr-2" /> Sobre
-                </span>
-              </Link>
-              <Link href="/contact">
-                <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-                  <FaPhone className="mr-2" /> Contato
-                </span>
-              </Link>
+
+            
 
               {/* Authenticated User Links */}
               {auth_user ? (
@@ -89,11 +80,19 @@ const Navbar: React.FC = () => {
                   </button>
                 </>
               ) : (
-                <Link href="/Login">
-                  <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-                    <FaSignInAlt className="mr-2" /> Entrar
-                  </span>
-                </Link>
+                <><Link href="/Login">
+                    <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                      <FaSignInAlt className="mr-2" /> Entrar
+                    </span>
+                  </Link><Link href="/About">
+                      <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                        <FaInfoCircle className="mr-2" /> Sobre
+                      </span>
+                    </Link><Link href="/contact">
+                      <span className="text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                        <FaPhone className="mr-2" /> Contato
+                      </span>
+                    </Link></>
               )}
             </div>
           </div>
@@ -163,16 +162,7 @@ const Navbar: React.FC = () => {
               <FaBook className="mr-2" /> Cursos
             </span>
           </Link>
-          <Link href="/about">
-            <span className="text-white block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-              <FaInfoCircle className="mr-2" /> Sobre
-            </span>
-          </Link>
-          <Link href="/contact">
-            <span className="text-white block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-              <FaPhone className="mr-2" /> Contato
-            </span>
-          </Link>
+         
 
           {/* Authenticated User Links for Mobile */}
           {auth_user ? (
@@ -199,11 +189,19 @@ const Navbar: React.FC = () => {
               </button>
             </>
           ) : (
-            <Link href="/Login">
-              <span className="text-white block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
-                <FaSignInAlt className="mr-2" /> Entrar
-              </span>
-            </Link>
+            <><Link href="/about">
+                <span className="text-white block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                  <FaInfoCircle className="mr-2" /> Sobre
+                </span>
+              </Link><Link href="/contact">
+                  <span className="text-white block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                    <FaPhone className="mr-2" /> Contato
+                  </span>
+                </Link><Link href="/Login">
+                  <span className="text-white block px-3 py-2 rounded-md text-base font-medium hover:bg-indigo-700 transition-all cursor-pointer flex items-center">
+                    <FaSignInAlt className="mr-2" /> Entrar
+                  </span>
+                </Link></>
           )}
         </nav>
       </div>
