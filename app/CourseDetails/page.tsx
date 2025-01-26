@@ -1,5 +1,6 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import { baseAPI } from "@/utils/variables";
@@ -84,11 +85,18 @@ const CourseDetails: React.FC = () => {
   const token = auth_user?.token;
 
   useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  useEffect(() => {
     const fetchContentTypes = async () => {
       try {
         const response = await axios.get(`${baseAPI}/lessons/get-content-types/`);
         setContentTypes(response.data);
-      } catch (err) {
+      } catch {
         setError("Falha ao buscar tipos de conteúdo.");
       }
     };
@@ -96,7 +104,7 @@ const CourseDetails: React.FC = () => {
     fetchContentTypes();
   }, []);
 
-  const fetchModules = async () => {
+  const fetchModules = useCallback(async () => {
     if (!courseId) return;
 
     try {
@@ -107,16 +115,16 @@ const CourseDetails: React.FC = () => {
       });
       setModules(responseModules.data);
       setError("");
-    } catch (err) {
+    } catch {
       setError("Falha ao carregar detalhes do curso.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId, token]);
 
   useEffect(() => {
     fetchModules();
-  }, [courseId, token]);
+  }, [fetchModules]);
 
   const handleModuleClick = async (module: Module) => {
     setSelectedModule(module);
@@ -133,7 +141,7 @@ const CourseDetails: React.FC = () => {
         }
       );
       setContents(responseContents.data);
-    } catch (err) {
+    } catch {
       setError("Falha ao carregar conteúdos do módulo.");
     } finally {
       setLoading(false);
@@ -149,7 +157,7 @@ const CourseDetails: React.FC = () => {
       });
       setContents(contents.filter((content) => content.id !== contentId));
       setNotification({ type: "success", message: "Conteúdo deletado com sucesso." });
-    } catch (err) {
+    } catch {
       setNotification({ type: "error", message: "Falha ao deletar conteúdo." });
     }
   };
@@ -178,7 +186,7 @@ const CourseDetails: React.FC = () => {
       );
       setNotification({ type: "success", message: "Conteúdo editado com sucesso." });
       setEditContentModalOpen(false);
-    } catch (err) {
+    } catch {
       setNotification({ type: "error", message: "Falha ao editar conteúdo." });
     }
   };
@@ -326,7 +334,6 @@ const CourseDetails: React.FC = () => {
               onContentAdded={() => handleModuleClick(selectedModule)} // Refetch contents after adding
             />
           )}
-
         </div>
 
         {selectedModule ? (

@@ -1,13 +1,14 @@
 "use client";
-import { useEffect, useState } from 'react';
-import { Transition } from '@headlessui/react';
-import { getStudentDashboard, markContentComplete, markModuleAsComplete } from '@/services/studentService'; 
+
+import { useEffect, useState } from "react";
+import { Transition } from "@headlessui/react";
+import { getStudentDashboard, markContentComplete, markModuleAsComplete } from "@/services/studentService";
 import { RootState } from "@/redux/store";
 import { useSelector } from "react-redux";
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { baseAPI } from '@/utils/variables';
-import { AiOutlineCheckCircle } from 'react-icons/ai';  // Use icons for better UI
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { baseAPI } from "@/utils/variables";
+import { AiOutlineCheckCircle } from "react-icons/ai";
 
 interface Content {
   id: number;
@@ -21,14 +22,13 @@ interface Content {
 interface Module {
   id: number;
   title: string;
-  description?: string; // Mark as optional if it's sometimes missing
-  order?: number;       // Same for order
+  description?: string;
+  order?: number;
   completed_content_count: number;
   total_content_count: number;
   contents: Content[];
   completed: boolean;
 }
-
 
 interface Course {
   id: number;
@@ -49,36 +49,32 @@ const StudentDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!token) {
-      router.push('/Login');
+      router.push("/Login");
       return;
     }
-  
+
     const fetchDashboard = async () => {
       try {
         const data = await getStudentDashboard(token);
-        console.log("API response data:", data); // Add this line to debug
+        console.log("API response data:", data); // Debugging log
         if (data.is_active === false) {
           setIsActive(false);
         } else {
           setCourses(data.courses || []);
         }
-      } catch (err) {
-        setError('Erro ao carregar os dados do painel.');
+      } catch {
+        setError("Erro ao carregar os dados do painel.");
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchDashboard();
   }, [token, router]);
-  
 
   const handleContentComplete = async (courseId: number, contentId: number, moduleId: number) => {
-    if (!token) {
-      console.error("Token is missing. Unable to complete content.");
-      return; // You can add more error handling here if needed.
-    }
-  
+    if (!token) return;
+
     try {
       await markContentComplete(courseId, contentId, token);
       setCourses((prevCourses) =>
@@ -105,14 +101,10 @@ const StudentDashboard: React.FC = () => {
       console.error("Erro ao marcar o conteúdo como completo:", err);
     }
   };
-  
 
   const handleModuleComplete = async (courseId: number, moduleId: number) => {
-    if (!token) {
-      console.error("Token is missing. Unable to complete module.");
-      return; // Return early if token is not available
-    }
-  
+    if (!token) return;
+
     try {
       await markModuleAsComplete(courseId, moduleId, token);
       setCourses((prevCourses) =>
@@ -131,14 +123,13 @@ const StudentDashboard: React.FC = () => {
       console.error("Erro ao marcar o módulo como completo:", err);
     }
   };
-  
 
   const renderContentItem = (content: Content, courseId: number, moduleId: number) => {
     const isCompleted = content.completed;
     return (
       <div className="flex items-center space-x-4 mb-2">
         {content.content ? (
-          <p className={`text-gray-800 ${isCompleted ? 'line-through text-green-500' : ''}`}>
+          <p className={`text-gray-800 ${isCompleted ? "line-through text-green-500" : ""}`}>
             {content.content}
           </p>
         ) : content.file ? (
@@ -146,7 +137,7 @@ const StudentDashboard: React.FC = () => {
         ) : content.url ? (
           renderVideoItem(content.url, content.title)
         ) : (
-          <p>Tipo de conteúdo desconhecido.</p>
+          <p>Conteúdo inválido ou ausente.</p>
         )}
 
         {!isCompleted && (
@@ -168,8 +159,8 @@ const StudentDashboard: React.FC = () => {
   };
 
   const renderFileItem = (file: string, title: string) => {
-    const fileType = file.split('.').pop();
-    if (['png', 'jpg', 'jpeg', 'gif'].includes(fileType || '')) {
+    const fileType = file.split(".").pop();
+    if (["png", "jpg", "jpeg", "gif"].includes(fileType || "")) {
       return (
         <div className="relative w-full h-64 mt-4">
           <Image
@@ -182,7 +173,7 @@ const StudentDashboard: React.FC = () => {
         </div>
       );
     }
-    if (['pdf', 'docx', 'xlsx', 'txt'].includes(fileType || '')) {
+    if (["pdf", "docx", "xlsx", "txt"].includes(fileType || "")) {
       return (
         <a
           href={`${baseAPI}${file}`}
@@ -219,20 +210,27 @@ const StudentDashboard: React.FC = () => {
   };
 
   const renderModule = (module: Module, courseId: number) => {
-    const moduleProgress = Math.floor((module.completed_content_count / module.total_content_count) * 100);
+    const validCompletedCount = module.completed_content_count || 0;
+    const validTotalCount = module.total_content_count || 1; // Prevent division by zero
+    const moduleProgress = Math.floor((validCompletedCount / validTotalCount) * 100);
+
     return (
       <details key={module.id} className="mb-4 border-b pb-2">
         <summary className="cursor-pointer text-lg font-medium text-gray-700 hover:text-indigo-500">
           {module.order}. {module.title} ({moduleProgress}% concluído)
         </summary>
-        <p className="text-gray-500">{module.description}</p>
-        <ul className="pl-4 mt-2 space-y-2">
-          {module.contents.map((content) => (
-            <li key={content.id} className="text-gray-600 border-b pb-2">
-              {renderContentItem(content, courseId, module.id)}
-            </li>
-          ))}
-        </ul>
+        <p className="text-gray-500">{module.description || "Sem descrição disponível."}</p>
+        {module.contents.length === 0 ? (
+          <p className="text-gray-500">Nenhum conteúdo disponível neste módulo.</p>
+        ) : (
+          <ul className="pl-4 mt-2 space-y-2">
+            {module.contents.map((content) => (
+              <li key={content.id} className="text-gray-600 border-b pb-2">
+                {renderContentItem(content, courseId, module.id)}
+              </li>
+            ))}
+          </ul>
+        )}
         {!module.completed && (
           <button
             className="mt-2 text-green-500 hover:text-green-700 transition"
@@ -287,7 +285,7 @@ const StudentDashboard: React.FC = () => {
               <h2 className="text-2xl font-semibold mb-4 text-indigo-600">{course.title}</h2>
               <p className="text-gray-600 mb-4">{course.overview}</p>
               <p className="text-gray-500 mb-4">
-                Progresso do Curso: <span className="font-bold">{course.progress}%</span>
+                Progresso do Curso: <span className="font-bold">{course.progress || 0}%</span>
               </p>
               <div>
                 {course.modules.map((module) => renderModule(module, course.id))}

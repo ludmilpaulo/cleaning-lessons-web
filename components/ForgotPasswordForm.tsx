@@ -20,7 +20,7 @@ const ForgotPasswordForm = () => {
       setLoading(false);
       alert("E-mail de redefinição de senha enviado com sucesso.");
       router.push("/Login");
-    } catch (err) {
+    } catch {
       setError("Failed to send password reset email. Please try again.");
       setMessage("");
       setLoading(false);

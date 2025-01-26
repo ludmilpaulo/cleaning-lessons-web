@@ -30,7 +30,7 @@ const StudentsProgress: React.FC<{ courseId: number }> = ({ courseId }) => {
           },
         });
         setProgressData(response.data);
-      } catch (err) {
+      } catch {
         setError("Failed to load students' progress.");
       } finally {
         setLoading(false);

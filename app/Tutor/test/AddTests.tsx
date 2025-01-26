@@ -57,7 +57,7 @@ const AddTests: React.FC<AddTestProps> = ({ moduleId }) => {
       );
       setSuccessMessage("Teste adicionado com sucesso!");
       setQuestions([]);
-    } catch (err) {
+    } catch {
       setErrorMessage("Erro ao adicionar teste.");
     } finally {
       setLoading(false);

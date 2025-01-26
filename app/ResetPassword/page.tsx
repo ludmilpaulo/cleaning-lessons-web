@@ -33,7 +33,7 @@ const ResetPassword = () => {
       await resetPassword(uid as string, token as string, newPassword);
       alert("Password has been reset. You can now log in.");
       router.push("/Login");
-    } catch (err) {
+    } catch {
       setError("Failed to reset password. Please try again.");
       setLoading(false);
     }

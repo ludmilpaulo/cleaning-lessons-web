@@ -35,7 +35,7 @@ const SignupForm = () => {
         alert("Inscrição bem-sucedida. Faça login.");
         router.push("/");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to sign up. Please try again.");
       alert("Falha ao se inscrever. Tente novamente."); // Display generic error message
     }
